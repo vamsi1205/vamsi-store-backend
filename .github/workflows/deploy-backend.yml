@@ -1,0 +1,39 @@
+name: Deploy Node.js Backend to EC2
+
+on:
+  push:
+    branches:
+      - main  # Trigger on push to the main branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18  # Use the Node.js version your app requires
+
+      - name: Install dependencies
+        run: |
+          npm install
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /var/www/backend
+            rm -rf *
+            echo "Copying backend files..."
+            scp -r -o StrictHostKeyChecking=no ${{ github.workspace }}/* ubuntu@${{ secrets.EC2_HOST }}:/var/www/backend
+            echo "Deploying backend..."
+            cd /var/www/backend
+            npm install
+            pm2 restart all
